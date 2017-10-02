@@ -1,0 +1,125 @@
+version: '2'
+
+volumes:
+  rethinkdb:
+  storage-temp:
+
+services:
+  nginx:
+#    image: nginx:mainline
+    build: nginx/
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    restart: unless-stopped
+    ports:
+      - 90:80
+      - 80:80
+    depends_on:
+      - app
+      - auth
+      - storage-plugin-apk
+      - storage-plugin-image
+      - storage-temp
+      - websocket
+      - api
+  adb:
+    image: sorccu/adb:latest
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+  rethinkdb:
+    image: rethinkdb:2.3
+    restart: unless-stopped
+    volumes:
+      - rethinkdb:/data
+  app:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    environment:
+      - RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015
+      - SECRET=change_me
+    command: stf app --auth-url http://192.168.4.85/auth/mock/ --websocket-url ws://192.168.4.85/ --port 3000
+    depends_on:
+      - rethinkdb
+  auth:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    environment:
+      - SECRET=change_me
+    command: stf auth-mock --app-url http://192.168.4.85/ --port 3000
+  processor:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    environment:
+      - RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015
+    command: stf processor --connect-app-dealer tcp://triproxy:7160 --connect-dev-dealer tcp://dev-triproxy:7260
+    depends_on:
+      - rethinkdb
+  triproxy:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    command: stf triproxy app --bind-pub "tcp://*:7150" --bind-dealer "tcp://*:7160" --bind-pull "tcp://*:7170"
+  dev-triproxy:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    command: stf triproxy dev --bind-pub "tcp://*:7250" --bind-dealer "tcp://*:7260" --bind-pull "tcp://*:7270"
+  migrate:
+    image: openstf/stf:latest
+    environment:
+      - RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015
+    command: stf migrate
+    depends_on:
+      - rethinkdb
+  provider:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    command: stf provider --name nuc --connect-sub tcp://dev-triproxy:7250 --connect-push tcp://dev-triproxy:7270 --storage-url http://192.168.4.85/ --public-ip 192.168.4.85 --heartbeat-interval 10000 --screen-ws-url-pattern "ws://192.168.4.85/d/nuc/<%= serial %>/<%= publicPort %>/" --adb-host adb --min-port 7400 --max-port 7700
+    ports:
+      - 7400-7700:7400-7700
+    depends_on:
+      - adb
+  reaper:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    environment:
+      - RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015
+    depends_on:
+      - migrate
+      - rethinkdb
+    command: stf reaper dev --connect-push tcp://dev-triproxy:7270 --connect-sub tcp://triproxy:7150 --heartbeat-timeout 30000
+  storage-plugin-apk:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    command: stf storage-plugin-apk --port 3000 --storage-url http://192.168.4.85/
+  storage-plugin-image:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    command: stf storage-plugin-image --port 3000 --storage-url http://192.168.4.85/
+  storage-temp:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    volumes:
+      - storage-temp:/data
+    command: stf storage-temp --port 3000 --save-dir /data
+  websocket:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    environment:
+      - SECRET=change_me
+      - RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015
+    command: stf websocket --port 3000 --storage-url http://192.168.4.85/ --connect-sub tcp://triproxy:7150 --connect-push tcp://triproxy:7170
+    depends_on:
+      - migrate
+      - rethinkdb
+  api:
+    image: openstf/stf:latest
+    restart: unless-stopped
+    environment:
+      - SECRET=change_me
+      - RETHINKDB_PORT_28015_TCP=tcp://rethinkdb:28015
+    command: stf api --port 3000 --connect-sub tcp://triproxy:7150 --connect-push tcp://triproxy:7170
+    depends_on:
+      - migrate
+      - rethinkdb
+
