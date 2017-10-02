@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
     environment:
       - RETHINKDB_PORT_28015_TCP
-      - SECRET=
+      - SECRET
     command: stf app --auth-url http://${PUBLIC_IP}/auth/mock/ --websocket-url ws://${PUBLIC_IP}/ --port 3000
     depends_on:
       - rethinkdb
