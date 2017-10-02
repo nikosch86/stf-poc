@@ -108,11 +108,11 @@ services:
     depends_on:
       - storage-temp
   storage-temp:
-    image: openstf/stf:latest
+    build: storage-temp/
     restart: unless-stopped
     volumes:
-      - storage-temp:/data
-    command: stf storage-temp --port 3000 --save-dir /data
+      - storage-temp:/app/data
+    command: stf storage-temp --port 3000 --save-dir /app/data
   websocket:
     image: openstf/stf:latest
     restart: unless-stopped
