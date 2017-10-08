@@ -11,6 +11,6 @@ choose an IP your deployment should use, usually that will be the IP of your hos
 choose a secret to be used for inter-service authentication.  
 Update the `.env` file accordingly
 
-Run `docker-compose up --build`  
+Run `docker-compose up -d --build`  
 Point your browser to the IP you chose,  
 login by providing any username and valid e-mail.
