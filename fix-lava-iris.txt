@@ -1,0 +1,5 @@
+sysadm@android-testing-station:~/openstf$ dc exec adb adb -s LA2G60G86CEECE6A shell
+shell@iris870:/ $ am start -n jp.co.cyberagent.stf/.IdentityActivity
+Starting: Intent { cmp=jp.co.cyberagent.stf/.IdentityActivity }
+shell@iris870:/ $ am startservice  -n jp.co.cyberagent.stf/.Service
+Starting service: Intent { cmp=jp.co.cyberagent.stf/.Service }
