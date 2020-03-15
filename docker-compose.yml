@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 
 volumes:
   rethinkdb:
@@ -46,8 +46,11 @@ services:
     image: openstf/stf:latest
     restart: unless-stopped
     environment:
+      - RETHINKDB_PORT_28015_TCP
       - SECRET
     command: stf auth-mock --app-url http://${PUBLIC_IP}/ --port 3000
+    depends_on:
+      - rethinkdb
   processor:
     image: openstf/stf:latest
     restart: unless-stopped
@@ -76,7 +79,7 @@ services:
   provider:
     image: openstf/stf:latest
     restart: unless-stopped
-    command: stf provider --name ${STATION_NAME} --connect-sub tcp://dev-triproxy:7250 --connect-push tcp://dev-triproxy:7270 --storage-url http://${PUBLIC_IP}/ --public-ip ${PUBLIC_IP} --heartbeat-interval 10000 --screen-ws-url-pattern "ws://${PUBLIC_IP}/d/nuc/<%= serial %>/<%= publicPort %>/" --adb-host adb --min-port 7400 --max-port 7700
+    command: stf provider --name ${STATION_NAME} --connect-sub tcp://dev-triproxy:7250 --connect-push tcp://dev-triproxy:7270 --storage-url http://${PUBLIC_IP}/ --public-ip ${PUBLIC_IP} --heartbeat-interval 10000 --screen-ws-url-pattern "ws://${PUBLIC_IP}/d/nuc/<%= serial %>/<%= publicPort %>/" --adb-host adb --min-port 7400 --max-port 7700 --allow-remote
     ports:
       - 7400-7700:7400-7700
     depends_on:
@@ -132,7 +135,7 @@ services:
     environment:
       - SECRET
       - RETHINKDB_PORT_28015_TCP
-    command: stf api --port 3000 --connect-sub tcp://triproxy:7150 --connect-push tcp://triproxy:7170
+    command: stf api --port 3000 --connect-sub tcp://triproxy:7150 --connect-push tcp://triproxy:7170 --connect-sub-dev tcp://dev-triproxy:7250 --connect-push-dev tcp://dev-triproxy:7270
     depends_on:
       - migrate
       - rethinkdb
