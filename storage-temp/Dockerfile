@@ -1,4 +1,4 @@
-FROM openstf/stf:latest
+FROM devicefarmer/stf:latest
 
 USER root
 RUN mkdir data && chown stf:stf data
